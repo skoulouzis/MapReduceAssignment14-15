@@ -246,7 +246,7 @@ $./compile.sh
 
 To make the script executable you should run:
 \begin{lstlisting}
-$chmod +x compile.sh
+$ chmod +x compile.sh
 \end{lstlisting}
 
 After compiling, a jar file named \texttt{nl.uva.AssignmentMapreduce.jar} should be created. This jar file contains all the libraries and the MappReduce job. 
@@ -255,20 +255,20 @@ Before running the job you should download the \texttt{tweets2009-06-brg.txt} fi
 After you have the file on you local disk you can run the job in a local-standalone mode by typing:
 
 \begin{lstlisting}
-$java -jar nl.uva.AssignmentMapreduce.jar tweets2009-06-brg.txt out 1 
+$ java -jar nl.uva.AssignmentMapreduce.jar tweets2009-06-brg.txt out 1 
 \end{lstlisting}
 
 Before running the job in fully-distributed mode you should copy the \texttt{tweets2009-06-brg.txt} on the hdfs. To do that you can type:
 
 \begin{lstlisting}
-$hdfs dfs -copyFromLocal tweets2009-06-brg.txt
+$ hdfs dfs -copyFromLocal tweets2009-06-brg.txt
 \end{lstlisting}
 
 This will copy the \texttt{tweets2009-06-brg.txt} file on the hdfs at \texttt{/user/\$USER}. For a full list of commands for the hdfs you can look at : \url{http://hadoop.apache.org/docs/r2.5.1/hadoop-project-dist/hadoop-common/FileSystemShell.html}
 
 To run the job in a fully-distributed mode (on DAS4) type: 
 \begin{lstlisting}
-$hadoop jar nl.uva.AssignmentMapreduce.jar tweets2009-06-brg.txt out 1
+$ hadoop jar nl.uva.AssignmentMapreduce.jar tweets2009-06-brg.txt out 1
 \end{lstlisting}
 
 \textbf{Attention:} If you attempt to run the job for the second time you will get an error like:
@@ -277,5 +277,12 @@ org.apache.hadoop.mapred.FileAlreadyExistsException: Output directory hdfs://mas
 \end{lstlisting}
 
 If you want to run the job again, either delete the output folder or specify another one. 
+
+
+
+To check out the code for this assignment you have to use git:
+\begin{lstlisting}
+$ git clone https://github.com/skoulouzis/MapReduceAssignment14-15.git
+\end{lstlisting}
 
 \end{document}     
