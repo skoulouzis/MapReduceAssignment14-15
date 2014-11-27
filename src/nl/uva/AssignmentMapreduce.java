@@ -74,7 +74,8 @@ public class AssignmentMapreduce extends Configured implements Tool {
     }
 
     /**
-     * This method configures the job 
+     * This method configures the job
+     *
      * @param args
      * @return
      * @throws IOException
@@ -82,6 +83,13 @@ public class AssignmentMapreduce extends Configured implements Tool {
      */
     private JobConf configureJob() throws IOException, URISyntaxException {
         JobConf conf = new JobConf(getConf(), AssignmentMapreduce.class);
+
+//conf.addResource(new Path("/cm/shared/package/hadoop/hadoop-2.5.0/etc/hadoop/core-site.xml"));
+//conf.addResource(new Path("/cm/shared/package/hadoop/hadoop-2.5.0/etc/hadoop/hdfs-site.xml"));
+//conf.addResource(new Path("/cm/shared/package/hadoop/hadoop-2.5.0/etc/hadoop/httpfs-site.xml"));
+//conf.addResource(new Path("/cm/shared/package/hadoop/hadoop-2.5.0/etc/hadoop/ mapred-site.xml"));
+//conf.addResource(new Path("/cm/shared/package/hadoop/hadoop-2.5.0/etc/hadoop/yarn-site.xml"));
+
         conf.setJobName("WC");
 
         //Set the Maper and formats
@@ -91,8 +99,8 @@ public class AssignmentMapreduce extends Configured implements Tool {
         //Set Input Format Format to apply to the input 
         //files for the mappers 
         conf.setInputFormat(TextInputFormat.class);
-       
-        
+
+
         //Set the Reducer and formats
         conf.setReducerClass(nl.uva.Reduce.class);
         //The data types emitted by the reducer are identified by 
@@ -100,10 +108,10 @@ public class AssignmentMapreduce extends Configured implements Tool {
         //It is the class for the value and output key.
         conf.setOutputKeyClass(Text.class);
         conf.setOutputValueClass(Text.class);
-                //Set output Format Format to apply to the output
+        //Set output Format Format to apply to the output
         //files for the reducer 
-         conf.setOutputFormat(TextOutputFormat.class);
-        
+        conf.setOutputFormat(TextOutputFormat.class);
+
         //Set the input path for the job
         Path localPath = new Path(dataset);
         FileInputFormat.setInputPaths(conf, localPath);
@@ -113,7 +121,7 @@ public class AssignmentMapreduce extends Configured implements Tool {
             conf.setNumReduceTasks(maxMap);
             conf.setNumMapTasks(maxMap);
         }
-        
+
         return conf;
     }
 }
