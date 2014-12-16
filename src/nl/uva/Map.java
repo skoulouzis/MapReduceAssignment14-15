@@ -33,7 +33,7 @@ public class Map extends MapReduceBase implements Mapper<LongWritable, Text, Tex
         StringTokenizer itr = new StringTokenizer(value.toString());
         int count = 0;
         while (itr.hasMoreTokens()) {
-            word.set(itr.nextToken());
+            word.set(itr.nextToken().toLowerCase());
             oc.collect(word, one);
             rprtr.incrCounter(Counters.INPUT_LINES, 1);
             count++;
