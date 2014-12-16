@@ -2,6 +2,7 @@ package nl.uva;
 
 import java.io.IOException;
 import java.util.Iterator;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.MapReduceBase;
@@ -14,7 +15,7 @@ import org.apache.hadoop.mapred.Reporter;
  *
  * @author S. Koulouzis
  */
-public class Reduce extends MapReduceBase implements Reducer<Text, IntWritable, Text, IntWritable> {
+public class Reduce extends MapReduceBase implements Reducer<Text, IntWritable, Text, Text> {
 
     static enum Counters {
 
@@ -22,7 +23,7 @@ public class Reduce extends MapReduceBase implements Reducer<Text, IntWritable, 
     }
 
     @Override
-    public void reduce(Text key, Iterator<IntWritable> itrtr, OutputCollector<Text, IntWritable> output, Reporter rprtr) throws IOException {
+    public void reduce(Text key, Iterator<IntWritable> itrtr, OutputCollector<Text, Text> output, Reporter rprtr) throws IOException {
 
         int sum = 0;
         int count = 0;
@@ -33,7 +34,8 @@ public class Reduce extends MapReduceBase implements Reducer<Text, IntWritable, 
                 rprtr.setStatus("Finished processing " + count + " records ");
             }
         }
-        output.collect(key, new IntWritable(sum));
+        String value = String.valueOf(count) + "\t" + String.valueOf(sum);
+        output.collect(key, new Text( value ));
         rprtr.incrCounter(Counters.OUTPUT_LINES, 1);
     }
 }
