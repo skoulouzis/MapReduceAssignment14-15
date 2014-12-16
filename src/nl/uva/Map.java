@@ -30,10 +30,12 @@ public class Map extends MapReduceBase implements Mapper<LongWritable, Text, Tex
 
     @Override
     public void map(LongWritable key, Text value, OutputCollector<Text, IntWritable> oc, Reporter rprtr) throws IOException {
-        StringTokenizer itr = new StringTokenizer(value.toString());
+        String line = value.toString().toLowerCase();
+        StringTokenizer itr = new StringTokenizer(line);
         int count = 0;
         while (itr.hasMoreTokens()) {
-            word.set(itr.nextToken().toLowerCase());
+            String token = itr.nextToken();
+            word.set(token);
             oc.collect(word, one);
             rprtr.incrCounter(Counters.INPUT_LINES, 1);
             count++;
