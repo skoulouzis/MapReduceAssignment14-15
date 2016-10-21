@@ -1,0 +1,8 @@
+\contentsline {section}{\numberline {1}Overview}{1}{section.1}
+\contentsline {section}{\numberline {2}Implementation}{2}{section.2}
+\contentsline {section}{\numberline {3}Tag Counter}{2}{section.3}
+\contentsline {subsection}{\numberline {3.1}Sentiment Analysis}{2}{subsection.3.1}
+\contentsline {section}{\numberline {4}Retweets and Replies}{5}{section.4}
+\contentsline {section}{\numberline {5}Report}{6}{section.5}
+\contentsline {section}{\numberline {6}Experiments}{6}{section.6}
+\contentsline {section}{\numberline {7}Grading}{7}{section.7}

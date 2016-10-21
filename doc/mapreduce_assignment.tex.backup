@@ -1,0 +1,342 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8]{inputenc}
+% \usepackage{url}
+\usepackage{breakurl} 
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{mathtools}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{ %
+ language=Java,    
+ basicstyle=\footnotesize,   
+ backgroundcolor=\color{white}, 
+ showspaces=false,   
+ showstringspaces=false,  
+ showtabs=false,    
+ frame=single,     
+ rulecolor=\color{black},  
+ tabsize=2,     
+ captionpos=b,    
+ breaklines=true,    
+ title=\lstname,    
+ keywordstyle=\color{blue},  
+ commentstyle=\color{dkgreen},  
+ stringstyle=\color{mauve},  
+ escapeinside={\%*}{*)},   
+ morekeywords={*,...} 
+}
+
+\def \year {2016}
+
+\date{}
+
+
+\title{Hadoop Assignment\\
+ University of Amsterdam BSc Informatica
+ Concurrency \& Parallel Programming
+}
+
+
+\begin{document}
+ \maketitle
+ 
+ \tableofcontents
+ 
+ \section{Overview}
+ 
+ In this assignment, you have to analyze a dataset containing Twitter posts. In particular, you have to
+perform three tasks:
+
+\begin{enumerate}
+ \item Find the top ten most popular hashtags
+ \item Perform sentiment analysis on the English-language tweets, and  nd the average and standard deviation of the sentiments for each of those top ten hashtags
+ \item Investigate retweet and reply behaviour
+\end{enumerate}
+
+There is a small dataset (5k tweets) available on Blackboard. We also have larger datasets available in \texttt{/projects/cpp\year} on the cluster. Using them for your experiments is optional, but you might find them useful.  Remember, though: the cluster is a shared resource.  Don't run large numbers of unnecessary experiments!
+
+For several parts of the assignment, you'll have to make your own decisions about what to do for example, which characters you will accept as part of hash tags, and how you will detect identical retweets. Justify your decisions in your report! 
+ 
+ 
+ \section{Implementation}
+ You  should  already  have  the  framework  from  the  tutorial;  you  should  simply  build  on  top  of  it,  and implement these analysis tasks using MapReduce with Hadoop. 
+ 
+ Remember:  first,  develop  your  code  locally,  and  make  sure  it  works  there,  and  then  make  sure  it works on the cluster, where you should run your experiments for the report.
+ 
+ 
+ \section{Tag Counter}
+ 
+ First, you have to  find the top ten tags in the dataset.  You should do the following: 
+ 
+\begin{enumerate}
+ \item Work out how to provide entire tweets (including all the associated information) as input to your mapper.  Take a look at the format of the example dataset file, and think about what should you set as the \texttt{textinputformat.record.delimiter} configuration option, to make MapReduce split up the input appropriately 
+ 
+ \item In your Mapper class, extract the text of each tweet, and detect if a line contains any hash tags
+ 
+ \item If the line contains one or more hash tags, emit them to the reducers using the appropriate keys/values
+ 
+ \item In your Reducer class, count the number of hash tags
+ 
+ \item Afterwards, examine the  final output, and determine which hash tags are the most popular. \textbf{ Attention:} You shouldn't implement anything else in MapReduce (e.g.  a sorting algorithm) to get the top ten tags.  You can simply write a script or some code which reads the output files, after you downloaded the results.  (Why don't you have to merge the output  les for this?). 
+ \end{enumerate}
+ 
+When you're done, it might be a good idea to make a copy of your code, before you move onto the next task.
+
+
+\subsection{Sentiment Analysis}
+For the second part of the assignment,  you will need to further modify both the \texttt{Mapper} and \texttt{Reduce} classes.
+ 
+ In natural language processing, language identification is the problem of determining which natural language is used in a text, while sentiment analysis aims to determine the attitude of a person according the her/his writings.  
+
+ 
+ To perform language detection you will use the JLangDetect API (\url{https://github.com/melix/jlangdetect}). Import in you class the UberLanguageDetector package: 
+ 
+ \lstset{language=Java}   
+ \begin{lstlisting}
+  import me.champeau.ld.UberLanguageDetector;
+ \end{lstlisting}
+ 
+ To detect the language of a String variable named \texttt{text} you can use: 
+ 
+ \begin{lstlisting}
+  String lang = UberLanguageDetector.getInstance().detectLang(text);
+ \end{lstlisting}
+ 
+ If the language in the variable \texttt{text} is in English the \texttt{lang} variable will be set to \texttt{'en'}. 
+ 
+ To perform sentiment analysis on English text you will use the Stanford Natural Language Processing API (\url{http://nlp.stanford.edu/}). To use this API you'll need to import the necessary packages in you class: 
+ 
+ \begin{lstlisting}
+  import edu.stanford.nlp.ling.CoreAnnotations;
+  import edu.stanford.nlp.pipeline.Annotation;
+  import edu.stanford.nlp.pipeline.StanfordCoreNLP;
+  import edu.stanford.nlp.rnn.RNNCoreAnnotations;
+  import edu.stanford.nlp.sentiment.SentimentCoreAnnotations;
+  import edu.stanford.nlp.trees.Tree;
+  import edu.stanford.nlp.util.CoreMap;
+ \end{lstlisting}
+ 
+ To detect the sentiment of a String variable named \texttt{text} you can use the following method:
+ \begin{lstlisting}
+  private int findSentiment(String text) {
+   Properties props = new Properties();
+   props.setProperty("annotators", "tokenize, ssplit, parse, sentiment");
+   props.put("parse.model", parseModelPath);
+   props.put("sentiment.model", sentimentModelPath);
+   StanfordCoreNLP pipeline = new StanfordCoreNLP(props);
+   
+   int mainSentiment = 0;
+   if (text != null && text.length() > 0) {
+	int longest = 0;
+	Annotation annotation = pipeline.process(text);
+	for (CoreMap sentence : annotation
+	.get(CoreAnnotations.SentencesAnnotation.class)) {
+	 Tree tree = sentence
+	 .get(SentimentCoreAnnotations.AnnotatedTree.class);
+	 int sentiment = RNNCoreAnnotations.getPredictedClass(tree);
+	 String partText = sentence.toString();
+	 if (partText.length() > longest) {
+	  mainSentiment = sentiment;
+	  longest = partText.length();
+	 }
+	 
+	}
+   }
+   
+   //This method is very demanding so try so save some memory 
+   pipeline = null;
+   System.gc();
+   return mainSentiment;
+  }
+ \end{lstlisting}
+ 
+ 
+ This method returns an integer that reflects the sentiment of a text. The higher the number the more positive the sentiment of the text.
+ 
+ \textbf{Hint:} Loading  the  models  is  very  slow.   You  can  dramatically  improve  the  performance  of  this function by creating the pipeline in the class constructor instead.  
+ 
+ It might be helpful to know that the standard deviation can be iteratively (value-by-value) calculated
+like this, after you've already calculated the average (mean):
+ 
+ \begin{lstlisting}
+  sd = sd + Math.pow(val - mean, 2);
+ \end{lstlisting}
+ 
+ 
+ Importantly,  in  this  method,  you  need  to  specify  the \texttt{parseModelPath} and \texttt{sentimentModelPath} variables.  The  first variable gives the path to the \texttt{englishPCFG.ser.gz} file, which is used to perform parsing  of  English-language  text.   The  second  gives  the  path  to  the \texttt{sentiment.ser.gz} file,  used  for sentiment detection. 
+ 
+ For local testing/use, you can simply download these  files from Blackboard.  However, on the cluster, you'll need to make sure that the files are available to all the mappers.  We've already put them on the HDFS, in \texttt{/projects/cpp\year}.
+ 
+ To  make  them  available,  you  have  to  use  the \texttt{DistributedCache},  which  is  provided  by  the MapReduce framework to cache  files (text, archives, etc) needed by applications.  To use it, you have to add the  files you need to the cache before running your job: 
+ 
+  \begin{lstlisting}
+  job.addCacheFile(new URI("/projects/cpp2016/sentiment.ser.gz"));
+ \end{lstlisting}
+
+ 
+ Of course, you'll need to import the URI class too.  Once you've done that, the  files you've cached will be available in the directory which your mapper runs in (so you can just open them by their  filename). 
+ 
+ This  path  doesn't  exist  on  your  own  computer,  so  to  make  this  work  properly  on  both  your  own machine  and  the  cluster,  you'll  need  to  check  whether  your  code  is  running  locally,  or  on  the  cluster using  MapReduce 2.0  (yarn).  You  can  obtain  the  framework  you're  running  under  by  checking  the value of the \texttt{mapreduce.framework.name} configuration option, which will be \texttt{yarn} when running on the cluster, or \texttt{local} if running locally:
+ 
+ 
+   \begin{lstlisting}
+  if (conf.get("mapreduce.framework.name").equals("yarn"))
+ \end{lstlisting}
+ 
+ Therefore, the steps you'll need to take to complete this assignment are: 
+ 
+ \begin{enumerate}
+  \item Add the \texttt{englishPCFG.ser.gz} and \texttt{sentiment.ser.gz} files to the list of cached files
+  \item Use the mappers to detect if a tweet contains any hash tags, and if it does, detect the language of the tweet
+  \item If the language is English perform the sentiment analysis and emit the proper keys and values to the reducers
+  \item Finally, use the reducers to calculate the average (mean) sentiment and the standard deviation, for each hash tag
+ \end{enumerate}
+ 
+ 
+ 
+ \section{Retweets and Replies}
+ 
+
+For the  final part of the assignment, you need to investigate the main two types of engagement on Twitter:  retweets, and replies.  Remember, the dataset is from 2009, so no metadata is available for this, only the message text.  Take a look through the example data, and you should  find plenty of examples. 
+
+\textbf{Retweets:}  When people retweet (using RT), it usually means they think the content of the tweet is interesting or useful, and so they think their followers would also benefit from seeing it.  By retweeting, they say ``take a look'' and expose the tweet to all their followers, giving the tweet a greater reach. 
+
+
+\textbf{Reply:} When a tweet is replied to (using \@), it suggests that the tweet has resonated enough with someone that it sparks a conversation, or encourages someone to share it with their followers.  You'll  find that most ``replies'' aren't actually replies, but just references to another user.  We don't expect you to try and distinguish these; you can just assume that they're all replies (if they're not retweets). 
+
+Given the popularity of these two activities, it would be interesting to explore how they are used. You should write code, using MapReduce, which answers the following questions (in approximate order of probable difficulty):
+
+\begin{itemize}
+ \item How many tweets are there for each type of reaction (retweets, and replies)?
+ \item When do most retweets happen (what times of day), and when do most replies happen? (
+Optional
+:
+Is this di erent for di erent languages?
+ 
+\end{itemize}
+
+
+
+
+
+ 
+\section{Assignment}
+ 
+ In this assignment you are called to analyze a twitter dataset: 
+ \begin{enumerate}
+  \item Find the top ten tags used in this dataset 
+  \item Perform sentiment analysis on the twitts written in English \& find the average sentiment and the standard deviation for each of the top ten tags
+ \end{enumerate}
+ 
+
+ 
+ \section{Implementation}
+ After you have studied and understood the tutorial use the code framework to implement the twitter dataset analysis. To clone the code from github use:
+ \lstset{language=} 
+ \begin{lstlisting}
+  $ git clone https://github.com/skoulouzis/MapReduceAssignment14-15.git
+ \end{lstlisting}
+ Or download from: \url{https://github.com/skoulouzis/MapReduceAssignment14-15/archive/master.zip}. 
+ The dataset you will be analyzing can be found on blackboard.
+ 
+ \subsection{Tag Counter}
+ To find the top ten tags in the dataset you will need to modify the \texttt{Map} class in order to detect hash tags. To complete this part of the assignment you'll need to go through the following steps: 
+ 
+ \begin{enumerate}
+  \item Use the mappers to detect if a line contains any hash tag
+  \item If the line contains one or more hash tags emit them to the reducers using the appropriate keys and values 
+  \item Use the reducers to count the number of hash tags 
+  \item Look at final output and determine which hash tags are the most popular
+ \end{enumerate}
+ 
+ \textbf{Attention:} You don't have to implement any sorting algorithm to get the top ten tags. Simply inspect the output file and determine the tags with the most occurrences. 
+ 
+ 
+ 
+ 
+ 
+ Additionally, in this method it is important to specify the \texttt{parseModelPath} and \texttt{sentimentModelPath} variables. These two variables are used for setting the path where the \texttt{englishPCFG.ser.gz} and \texttt{sentiment.ser.gz} files are located (available in blackboard). The \texttt{englishPCFG.ser.gz} file is used to perform the parsing of the text and the \texttt{sentiment.ser.gz} to detect the sentiment. To use these two files you will first have to make them available for all the mappers. This is done with the use of the \texttt{DistributedCache}. \texttt{DistributedCache} is a facility provided by the MapReduce framework to cache files (text, archives, jars etc.) needed by applications. To use it you will have add the files you want to the \texttt{DistributedCache} in the configuration step (in the \texttt{configureJob()} method) :
+ 
+
+ 
+ To retrieve the path of the files form the \texttt{Map} class you have to override the \texttt{configure()} method. The \texttt{configure()} initializes a new mapper instance from a \texttt{JobConf}. This method is called before the \texttt{map} method:
+ \begin{lstlisting}
+  @Override
+  public void configure(JobConf conf) {
+   try {
+	Job job = Job.getInstance(conf);
+	//Get the cached files here
+   } catch (IOException ex) {
+	Logger.getLogger(Map.class.getName()).log(Level.SEVERE, null, ex);
+   }
+  }
+ \end{lstlisting}
+ 
+ 
+ 
+ The standard deviation of a mean can be calculated using: 
+ 
+ 
+ 
+ \subsection{Reporting} \label{sec:report}
+ Items you are expected to hand in:
+ 
+ \begin{enumerate}
+  \item Small report (maximum 2 pages) 
+  \item Your source code including comprehensive comments. When you are done with your assignment, you don't need to include the libraries. Simply handing your \texttt{src} folder 
+ \end{enumerate}
+ 
+ 
+ Your report should contain the following sections:
+ 
+ \begin{enumerate}
+  \item Introduction: Very briefly (no more that 2 paragraphs) describe the major components of Hadoop
+  \item Implementation: Describe your approach for implementing the twitter dataset analysis 
+  \item Results: 
+  \begin{enumerate}
+   \item A table with the top ten hash tags you found, their occurrences, their average sentiment and their standard deviation
+   \item A graph showing speedup measurements when using 1, 2, 4, 8 mappers
+  \end{enumerate}
+  \item Conclusion: 
+  \begin{enumerate}
+   \item Discuss what is the benefit of adding more mappers
+   \item If you didn't observe any speed up by adding more mappers explain why
+  \end{enumerate}
+  
+ \end{enumerate}
+ 
+ 
+ \subsection{Experiments}
+ Keep in mind that you will be shearing the cluster, therefore your measurements will be influenced by each-others experiments. 
+ With this in mind, when you measure speedup you should perform multiple experiments analyze them statistically and present your findings. 
+ You should graph the speedup and include error bars. Speedup is a metric that shows how much faster an algorithm runs if we add more instances to execute it. It gives the relative performance improvement when executing a task and is calculated by: 
+ 
+ \[
+ S_p = \frac{T_1}{T_p}
+ \]
+ 
+ Where $T_1$ is the execution time when using one node, in this case one mapper and $T_p$ is the execution time when using $p$ nodes, in this case 1,2,4 or 8 mappers.
+ 
+ \subsection{Notes}
+ If you want to run your experiments at any time you want without having to be logged in you can use the \texttt{at} command:
+ 
+ \lstset{language=}   
+ \begin{lstlisting}
+  $ at 06:45
+  at> ls 
+  at> <EOT>
+  job 1459 at 2016-11-12 06:45
+ \end{lstlisting}
+ After typing \texttt{at 06:45} you type the command you wish to run and to exit you press Ctrl+D. The above command will execute the \texttt{ls} command in 06:45. More to get more details you see man page. 
+ 
+ 
+ \subsection{Deadline and possible points}
+ Deadline: \textbf{November 28} \\
+ Points: Tag Counter: 4/10, Sentiment Analysis: 6/10. \\
+ To score full points your code has to work and produce correct results. Also in you report you will have to include all the requested graphs and results and also answer to all the questions of Section \ref{sec:report}
+\end{document}   
